@@ -166,6 +166,7 @@ export default function ChatInterface({
     setAccumulatedProfile(updated);
     try {
       sessionStorage.setItem("namma_profile", JSON.stringify(updated));
+      localStorage.setItem("namma_profile", JSON.stringify(updated));
     } catch {}
 
     handleSend(textToSend, chip.label, updated);
@@ -204,9 +205,27 @@ export default function ChatInterface({
 
       if (!data.profile) throw new Error("chat returned no profile");
 
-      setAccumulatedProfile(data.profile);
+      const resolvedProfile: Profile = {
+        ...(currentProfile || {}),
+        ...data.profile,
+      };
+      if (!data.profile.income_annual && currentProfile?.income_annual) {
+        resolvedProfile.income_annual = currentProfile.income_annual;
+      }
+      if (!data.profile.condition && currentProfile?.condition) {
+        resolvedProfile.condition = currentProfile.condition;
+      }
+      if (!data.profile.state && currentProfile?.state) {
+        resolvedProfile.state = currentProfile.state;
+      }
+      if (!data.profile.district && currentProfile?.district) {
+        resolvedProfile.district = currentProfile.district;
+      }
+
+      setAccumulatedProfile(resolvedProfile);
       try {
-        sessionStorage.setItem("namma_profile", JSON.stringify(data.profile));
+        sessionStorage.setItem("namma_profile", JSON.stringify(resolvedProfile));
+        localStorage.setItem("namma_profile", JSON.stringify(resolvedProfile));
       } catch {}
 
       const assistantMsgId = `asst-${Date.now()}`;
@@ -216,13 +235,13 @@ export default function ChatInterface({
           id: assistantMsgId,
           role: "assistant",
           text: data.conversational_response || "Here are the government schemes that match your profile:",
-          profile: data.profile,
+          profile: resolvedProfile,
         },
       ]);
 
       if (onAnalysisComplete) {
         onAnalysisComplete({
-          profile: data.profile,
+          profile: resolvedProfile,
           conversationalResponse: data.conversational_response,
           searchTerms: data.search_terms ?? [],
           userMessage: message,
@@ -230,7 +249,7 @@ export default function ChatInterface({
         });
       }
       if (onProfile) {
-        onProfile(data.profile, message);
+        onProfile(resolvedProfile, message);
       }
     } catch {
       setError(t("chat_error", locale));
@@ -369,7 +388,7 @@ export default function ChatInterface({
       </div>
 
       {/* Input Box Card (Spoken/mic option removed as requested) */}
-      <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200">
+      <div className="rounded-3xl bg-white p-4.5 shadow-xs border border-stone-200/90">
         <label htmlFor="situation" className="sr-only">
           {t("chat_label", locale)}
         </label>
@@ -386,14 +405,14 @@ export default function ChatInterface({
             }}
             rows={2}
             placeholder={t("chat_placeholder", locale)}
-            className="w-full rounded-xl border border-slate-300 p-3.5 text-base text-slate-900 placeholder:text-slate-500 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
+            className="w-full rounded-2xl border border-stone-300/80 p-3.5 text-base text-stone-900 placeholder:text-stone-400 focus:border-[#132A1D] focus:ring-2 focus:ring-emerald-100 outline-none transition-all resize-none font-normal"
           />
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             {/* Quick Sample Situation Pills */}
             <div className="flex flex-wrap items-center gap-1.5" aria-label={t("sample_label", locale)}>
-              <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-xs font-bold text-stone-500 mr-1 flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-amber-500" />
                 Try:
               </span>
               {SAMPLES.map((sample, idx) => {
@@ -407,7 +426,7 @@ export default function ChatInterface({
                       setText(display);
                       handleSend(display);
                     }}
-                    className="min-h-[36px] rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900 transition-all text-left"
+                    className="min-h-[32px] rounded-full border border-stone-200/90 bg-stone-50/80 px-3.5 py-1 text-xs font-semibold text-stone-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-950 transition-all text-left shadow-2xs cursor-pointer"
                   >
                     {display.length > 35 ? display.slice(0, 35) + "..." : display}
                   </button>
@@ -421,16 +440,16 @@ export default function ChatInterface({
                 type="button"
                 onClick={() => handleSend()}
                 disabled={loading || text.trim() === ""}
-                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[#0F294A] px-6 text-sm font-bold text-white shadow-sm hover:bg-[#1E40AF] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#132A1D] px-6 text-xs font-bold text-white shadow-xs hover:bg-[#1E3A2B] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 <span>{loading ? t("sending", locale) : t("send", locale)}</span>
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 p-2.5 rounded-lg border border-red-200">
+            <div className="flex items-center gap-2 text-xs font-medium text-red-700 bg-red-50 p-2.5 rounded-xl border border-red-200">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>

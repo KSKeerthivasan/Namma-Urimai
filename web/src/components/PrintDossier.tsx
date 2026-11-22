@@ -23,7 +23,7 @@ export default function PrintDossier({
 
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem("namma_profile");
+      const stored = sessionStorage.getItem("namma_profile") || localStorage.getItem("namma_profile");
       if (stored) {
         const p = JSON.parse(stored);
         setEffectiveCitizenDetails((prev) => {

@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
-import { Schema, SchemaType } from "@google/generative-ai";
 import { getGemini } from "@/lib/geminiClient";
 import type { Profile } from "@/lib/types";
+import { SchemaType, type ResponseSchema } from "@google/generative-ai";
 
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-const responseSchema: Schema = {
+const responseSchema: ResponseSchema = {
   type: SchemaType.OBJECT,
   properties: {
     profile: {
       type: SchemaType.OBJECT,
       properties: {
-        name: { type: SchemaType.STRING },
         age: { type: SchemaType.NUMBER },
         gender: {
           type: SchemaType.STRING,
           format: "enum",
-          enum: ["Male", "Female", "Transgender", "All"],
+          enum: ["female", "male", "transgender", "other"],
         },
         state: { type: SchemaType.STRING },
         district: { type: SchemaType.STRING },
@@ -73,7 +72,7 @@ const SYSTEM_INSTRUCTION =
   "1. Extract citizen parameters into 'profile'. Preserve and merge any previously accumulated profile data. Leave unknown fields empty. " +
   "   - Ration Card: 'Rice Card', 'BPL Card', 'Green Card', or 'அரிசி அட்டை' map to 'PHH'. 'Sugar Card', 'White Card', or 'சர்க்கரை அட்டை' map to 'NPHH'. 'Antyodaya' maps to 'AAY'. 'No ration card' maps to 'None'. " +
   "   - Location inference: If a city or district is named without state, infer state (Chennai, Madurai, Coimbatore, Tiruchirappalli, Salem -> Tamil Nadu; Bengaluru -> Karnataka; Mumbai -> Maharashtra; etc.). " +
-  "   - Income inference: If citizen mentions income: '< 1 Lakh' or 'below 1 lakh' set income_annual to 90000; '1 Lakh - 2.5 Lakhs' or '< 2.5 Lakhs' or 'below 2.5 lakhs' set income_annual to 200000; '2.5 Lakhs - 5 Lakhs' or '< 5 Lakhs' or 'below 5 lakhs' set income_annual to 400000; '> 5 Lakhs' or 'above 5 lakhs' set income_annual to 600000. NEVER omit income_annual when user shares income! " +
+  "   - Income inference: If citizen mentions income: '< 1 Lakh' or 'below 1 lakh' set income_annual to 90000; '1 Lakh - 2.5 Lakhs' or '< 2.5 Lakhs' or 'below 2.5 lakhs' set income_annual to 200000; '2.5 Lakhs - 5 Lakhs' or '< 5 Lakhs' or 'below 5 lakhs' set income_annual to 400000; '> 5 Lakhs' or 'above 5 lakhs' set income_annual to 600000. NEVER omit or zero income_annual when user shares income! " +
   "   - Condition inference: 'Destitute / No Family Support', 'Differently Abled Senior', 'Destitute Widow', 'Farmer Senior', etc. set 'condition' and 'general_need'. " +
   "   - Need / Age inference: 'Old age pension' implies senior citizen (set age to 65 and general_need to 'Old Age Pension'). " +
   "2. Write 'conversational_response' in the citizen's detected language (or English if typed in English). " +
@@ -149,11 +148,22 @@ export async function POST(request: Request) {
     const result = await generateWithRetry(() => generativeModel.generateContent(prompt));
     const parsed = JSON.parse(result.response.text());
 
-    // Merge existing profile with newly extracted values
-    const mergedProfile: Profile = {
-      ...(typeof existingProfile === "object" && existingProfile !== null ? (existingProfile as Profile) : {}),
-      ...(parsed.profile || {}),
-    };
+    // Clean merge: never let null/undefined/0/empty string in parsed.profile overwrite an existing profile value
+    const rawExisting =
+      typeof existingProfile === "object" && existingProfile !== null
+        ? (existingProfile as Record<string, unknown>)
+        : {};
+    const rawParsed =
+      typeof parsed.profile === "object" && parsed.profile !== null
+        ? (parsed.profile as Record<string, unknown>)
+        : {};
+
+    const mergedProfile: Profile = { ...(rawExisting as unknown as Profile) };
+    for (const [k, v] of Object.entries(rawParsed)) {
+      if (v !== null && v !== undefined && v !== "" && v !== 0) {
+        (mergedProfile as Record<string, unknown>)[k] = v;
+      }
+    }
 
     // Deterministic rule-based extraction to guarantee income and needs are preserved everywhere
     const lowerMsg = message.toLowerCase();

@@ -55,10 +55,10 @@ export default function SchemeTabs({
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const uid = useId();
 
-  // Hydrate missing criteria from sessionStorage if available
+  // Hydrate missing criteria from sessionStorage or localStorage if available
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem("namma_profile");
+      const stored = sessionStorage.getItem("namma_profile") || localStorage.getItem("namma_profile");
       if (stored) {
         const p = JSON.parse(stored);
         setEffectiveQualifyRows((prev) =>

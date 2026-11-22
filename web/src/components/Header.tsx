@@ -88,33 +88,33 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-slate-200">
+    <header className="bg-[#F8FAF7]/95 backdrop-blur-md border-b border-stone-200/80 sticky top-0 z-40">
       {/* 24x7 Government Helpline Utility Strip */}
-      <div className="bg-[#0F294A] text-slate-100 text-xs px-4 py-2 border-b border-slate-800">
+      <div className="bg-[#132A1D] text-stone-200 text-xs px-4 py-2 border-b border-emerald-950/40">
         <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-1.5 font-medium text-slate-300">
+          <div className="flex items-center gap-1.5 font-medium text-stone-300">
             <Phone className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-            <span className="font-semibold text-white">24x7 Helplines (Toll-Free):</span>
+            <span className="font-semibold text-white tracking-wide">24x7 Helplines (Toll-Free):</span>
           </div>
 
-          <nav aria-label={t("helplines_nav", locale)} className="flex flex-wrap items-center gap-2">
+          <nav aria-label={t("helplines_nav", locale)} className="flex flex-wrap items-center gap-1.5">
             {HELPLINES.map((h) => (
               <a
                 key={h.number}
                 href={`tel:${h.number}`}
                 onClick={(e) => handleHelplineClick(e, h.number, h.title)}
                 title={`Call ${h.number} - ${h.title} (Opens phone dialer or copies number)`}
-                className="inline-flex items-center gap-1 rounded-md bg-slate-800/90 hover:bg-[#1E40AF] px-2.5 py-0.5 text-slate-200 hover:text-white transition-all cursor-pointer border border-slate-700/60"
+                className="inline-flex items-center gap-1 rounded-full bg-white/10 hover:bg-emerald-700/40 px-3 py-0.5 text-stone-200 hover:text-white transition-all cursor-pointer border border-white/15"
               >
-                <span className="font-bold text-amber-400 tracking-wide">{h.number}</span>
-                <span className="text-slate-300 text-[11px] font-medium">{h.label}</span>
+                <span className="font-bold text-amber-300 tracking-wide">{h.number}</span>
+                <span className="text-stone-300 text-[11px] font-medium">{h.label}</span>
               </a>
             ))}
           </nav>
 
           {/* Desktop Clipboard Notification Toast */}
           {copiedNumber && (
-            <div className="w-full flex items-center justify-center gap-1.5 bg-emerald-900/90 text-emerald-100 px-3 py-1 rounded border border-emerald-500/40 text-xs animate-fade-in font-medium">
+            <div className="w-full flex items-center justify-center gap-1.5 bg-emerald-950 text-emerald-200 px-3 py-1 rounded-full border border-emerald-500/40 text-xs animate-fade-in font-medium">
               <Check className="h-3.5 w-3.5 text-emerald-400" />
               <span>Helpline <strong>{copiedNumber}</strong> copied to clipboard (also opening phone dialer if available).</span>
             </div>
@@ -123,24 +123,24 @@ export default function Header() {
       </div>
 
       {/* Main Brand & Action Header */}
-      <div className="mx-auto max-w-6xl px-4 py-3.5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto max-w-6xl px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <Link href="/" className="text-2xl md:text-3xl font-extrabold text-[#0F294A] tracking-tight hover:opacity-90 transition-opacity">
+          <div className="flex items-center gap-2.5">
+            <Link href="/" className="font-serif-display text-2xl md:text-3xl font-bold text-[#132A1D] tracking-tight hover:opacity-90 transition-opacity">
               {t("app_name", locale)}
             </Link>
-            <span className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+            <span className="rounded-full bg-emerald-100/80 border border-emerald-300/80 px-2.5 py-0.5 text-xs font-bold text-emerald-900 tracking-wide">
               Civic Navigator
             </span>
           </div>
-          <p className="text-sm md:text-base text-slate-600 font-medium">
+          <p className="text-xs md:text-sm text-stone-600 font-medium mt-0.5">
             {t("app_tagline", locale)}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Language Selector */}
-          <div role="group" aria-label={t("language_group", locale)} className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          {/* Language Selector in Pill Container */}
+          <div role="group" aria-label={t("language_group", locale)} className="flex items-center gap-1 bg-stone-200/70 p-1 rounded-full border border-stone-300/60">
             {LANGUAGES.map((lang) => {
               const active = locale === lang.code;
               return (
@@ -150,10 +150,10 @@ export default function Header() {
                   aria-label={`Show in ${lang.name}`}
                   aria-pressed={active}
                   onClick={() => setLocale(lang.code)}
-                  className={`min-h-[38px] px-3 rounded-lg text-sm font-semibold transition-all ${
+                  className={`min-h-[34px] px-3.5 rounded-full text-xs font-bold transition-all ${
                     active
-                      ? "bg-[#1E40AF] text-white shadow-xs"
-                      : "text-slate-700 hover:text-slate-900 hover:bg-slate-200"
+                      ? "bg-[#132A1D] text-white shadow-xs"
+                      : "text-stone-700 hover:text-stone-900 hover:bg-stone-300/50"
                   }`}
                 >
                   {lang.label}
@@ -164,8 +164,8 @@ export default function Header() {
 
           {/* Citizen Login / Status Button */}
           {currentUser ? (
-            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 rounded-xl px-3 py-1.5 text-xs">
-              <div className="flex items-center gap-1 font-bold text-emerald-900">
+            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300/80 rounded-full px-3.5 py-1.5 text-xs">
+              <div className="flex items-center gap-1 font-bold text-emerald-950">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
                 <span>+91 {currentUser.phone.slice(-4)}</span>
               </div>
@@ -173,7 +173,7 @@ export default function Header() {
                 type="button"
                 onClick={handleLogout}
                 title="Log out to Guest Mode"
-                className="text-slate-500 hover:text-red-700 p-1 transition-colors"
+                className="text-stone-500 hover:text-red-700 p-1 transition-colors"
               >
                 <LogOut className="h-3.5 w-3.5" />
               </button>
@@ -182,9 +182,9 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setAuthModalOpen(true)}
-              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-[#0F294A] bg-white px-3.5 text-sm font-bold text-[#0F294A] hover:bg-blue-50 transition-all cursor-pointer shadow-2xs"
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-[#132A1D] bg-white px-4 text-xs font-bold text-[#132A1D] hover:bg-emerald-50/70 transition-all cursor-pointer shadow-2xs"
             >
-              <User className="h-4 w-4 text-[#1E40AF]" />
+              <User className="h-4 w-4 text-emerald-800" />
               <span>Login</span>
             </button>
           )}
@@ -192,9 +192,9 @@ export default function Header() {
           {/* Saved Schemes Link */}
           <Link
             href="/tracker"
-            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl bg-[#0F294A] px-4 text-sm font-bold text-white shadow-sm hover:bg-[#1E40AF] transition-all"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#132A1D] px-4.5 text-xs font-bold text-white shadow-xs hover:bg-[#1E3A2B] transition-all"
           >
-            <Bookmark className="h-4 w-4" />
+            <Bookmark className="h-3.5 w-3.5" />
             <span>{t("nav_saved", locale)}</span>
           </Link>
         </div>

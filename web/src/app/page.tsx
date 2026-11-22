@@ -422,12 +422,23 @@ export default function Home() {
   }) {
     const state = result.profile.state?.trim() || undefined;
     setOriginalMessage(result.userMessage);
-    setProfile(result.profile);
+    let resolvedProfile = result.profile;
+    setProfile((prev) => {
+      const merged: Profile = {
+        ...(prev || {}),
+        ...result.profile,
+      };
+      if (!merged.income_annual && prev?.income_annual) {
+        merged.income_annual = prev.income_annual;
+      }
+      resolvedProfile = merged;
+      return merged;
+    });
     setProfileState(state);
     setActiveSearchTerms(result.searchTerms);
     setDynamicFollowup(result.dynamicFollowup ?? null);
 
-    runIntelligentSearch(result.searchTerms, state, undefined, result.profile, null, activeFilterName);
+    runIntelligentSearch(result.searchTerms, state, undefined, resolvedProfile, null, activeFilterName);
   }
 
   function handleChipSelect(chip: DynamicChip) {
@@ -497,27 +508,41 @@ export default function Home() {
   const hasMore = schemes.length > displayCount;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-base text-slate-900 pb-16">
+    <div className="min-h-screen bg-[#F8FAF7] text-base text-stone-900 pb-16">
       <Header />
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6">
+      <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+        {/* Editorial Civic Hero Headline */}
+        <section className="text-center max-w-3xl mx-auto pt-2 pb-1 space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/70 border border-emerald-300/80 px-3.5 py-1 text-xs font-bold text-emerald-950 shadow-2xs">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span>Verified 5,200+ Central &amp; State Welfare Programs</span>
+          </div>
+          <h1 className="font-serif-display text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#132A1D] tracking-tight leading-[1.16]">
+            Every welfare scheme you qualify for. In simple words.
+          </h1>
+          <p className="text-sm md:text-base text-stone-600 font-normal max-w-2xl mx-auto leading-relaxed">
+            Tell us your situation naturally. We match you with government pensions, scholarships, medical coverage, and direct financial subsidies.
+          </p>
+        </section>
+
         {/* Citizen Access Mode: Guest vs Login Decision Banner */}
         {!hideGuestBanner && (
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-[#0F294A] text-white p-4.5 rounded-2xl shadow-sm border border-slate-800">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#132A1D] text-white p-4.5 rounded-3xl shadow-xs border border-emerald-950/40">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300 mt-0.5">
-                {citizenUser ? <ShieldCheck className="h-5 w-5 text-emerald-400" /> : <UserCheck className="h-5 w-5" />}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-emerald-300 mt-0.5">
+                {citizenUser ? <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" /> : <UserCheck className="h-4.5 w-4.5" />}
               </div>
               <div className="text-xs space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-bold text-sm text-slate-100">
+                  <p className="font-bold text-sm text-white">
                     {citizenUser ? `Citizen Account Active (+91 ${citizenUser.phone.slice(-4)})` : "Guest Mode Active (No Login Required)"}
                   </p>
-                  <span className={`px-2 py-0.5 rounded-md font-semibold text-[11px] ${citizenUser ? "bg-emerald-900/80 text-emerald-300 border border-emerald-600/40" : "bg-blue-900/60 text-blue-200 border border-blue-700/40"}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] tracking-wide ${citizenUser ? "bg-emerald-900/90 text-emerald-300 border border-emerald-600/40" : "bg-white/10 text-stone-200 border border-white/15"}`}>
                     {citizenUser ? "☁️ Cloud Synced" : "Local Browser Only"}
                   </span>
                 </div>
-                <p className="text-slate-300 leading-relaxed max-w-3xl">
+                <p className="text-stone-300 leading-relaxed max-w-3xl">
                   {citizenUser ? (
                     <span>Your document checklist checkboxes, saved schemes, and application roadmap progress are synced across all your devices.</span>
                   ) : (
@@ -537,7 +562,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 px-3.5 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-stone-950 px-4 py-2 text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
                   <LogIn className="h-3.5 w-3.5" />
                   <span>Login to Track</span>
@@ -545,14 +570,14 @@ export default function Home() {
               )}
               <Link
                 href="/tracker"
-                className="inline-flex items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 text-xs font-bold text-white transition-all"
+                className="inline-flex items-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-xs font-bold text-white transition-all"
               >
                 Saved Schemes
               </Link>
               <button
                 type="button"
                 onClick={dismissGuestBanner}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-stone-400 hover:text-white p-1 rounded-full cursor-pointer"
                 title="Dismiss note"
               >
                 <X className="h-4 w-4" />
@@ -561,39 +586,41 @@ export default function Home() {
           </div>
         )}
 
-        {/* Interactive Conversational Assistant */}
-        <ChatInterface
-          onAnalysisComplete={handleAnalysisComplete}
-          followup={dynamicFollowup}
-          onChipSelect={handleChipSelect}
-          onResetSession={handleResetAll}
-        />
+        {/* Interactive Conversational Assistant (Template Showcase Container) */}
+        <div className="rounded-3xl bg-gradient-to-b from-[#E7EFE8]/70 via-[#F0F5F1]/40 to-white/20 p-2 sm:p-3 border border-[#D5E3D6] shadow-2xs">
+          <ChatInterface
+            onAnalysisComplete={handleAnalysisComplete}
+            followup={dynamicFollowup}
+            onChipSelect={handleChipSelect}
+            onResetSession={handleResetAll}
+          />
+        </div>
 
         {/* Searching Status */}
         {searching && (
-          <div className="flex items-center justify-center gap-3 p-6 text-slate-600 bg-white rounded-2xl border border-slate-200 shadow-xs">
-            <Sparkles className="h-5 w-5 text-[#1E40AF] animate-spin" />
-            <p className="font-medium text-base">Narrowing down verified government schemes specifically for your criteria...</p>
+          <div className="flex items-center justify-center gap-3 p-6 text-stone-700 bg-white rounded-3xl border border-stone-200/90 shadow-2xs">
+            <Sparkles className="h-5 w-5 text-emerald-700 animate-spin" />
+            <p className="font-semibold text-sm md:text-base">Narrowing down verified government schemes specifically for your criteria...</p>
           </div>
         )}
 
         {/* Search Error Alert */}
         {searchError && (
-          <div className="rounded-xl bg-red-50 p-4 border border-red-200 text-red-800 font-medium">
+          <div className="rounded-2xl bg-red-50 p-4 border border-red-200 text-red-900 font-medium text-sm">
             {searchError}
           </div>
         )}
 
         {/* Matched Schemes Results Section */}
         {originalMessage && !searching && !searchError && (
-          <section aria-label="Scheme results" className="flex flex-col gap-5 mt-1">
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm">
+          <section aria-label="Scheme results" className="flex flex-col gap-5 mt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-5 rounded-3xl border border-stone-200/90 shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 shadow-xs">
-                  <ShieldCheck className="h-6 w-6" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-900 shadow-2xs">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-extrabold text-[#0F294A]">
+                  <h2 className="font-serif-display text-xl md:text-2xl font-bold text-[#132A1D]">
                     {schemes.length === 0
                       ? "Found 0 Welfare Schemes Matching Your Criteria"
                       : schemes.length <= 5
@@ -602,7 +629,7 @@ export default function Home() {
                       ? `Found ${schemes.length} Verified Schemes Specifically Matching Your Criteria`
                       : `Found ${schemes.length} Welfare Schemes You Qualify For`}
                   </h2>
-                  <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
+                  <p className="text-xs md:text-sm text-stone-600 font-medium mt-0.5">
                     {schemes.length <= 5
                       ? "✓ Filtered to your exact background criteria — these are your highest-probability schemes."
                       : activeFilterName
@@ -615,41 +642,41 @@ export default function Home() {
               {/* Active Filter Badges */}
               <div className="flex flex-wrap items-center gap-2">
                 {activeFilterName && (
-                  <div className="flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-300 px-3 py-1 text-xs font-bold text-blue-900 shadow-2xs">
+                  <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-300/80 px-3 py-1 text-xs font-bold text-emerald-950 shadow-2xs">
                     <span>Active: {activeFilterName}</span>
                     <button
                       type="button"
                       onClick={clearActiveFilter}
-                      className="rounded-full p-0.5 hover:bg-blue-200 text-blue-700 transition-colors"
+                      className="rounded-full p-0.5 hover:bg-emerald-200 text-emerald-800 transition-colors cursor-pointer"
                       title="Clear filter"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-3 w-3" />
                     </button>
                   </div>
                 )}
                 {profile?.state && (
-                  <div className="flex items-center gap-1 rounded-xl bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-800">
+                  <div className="flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-900 shadow-2xs">
                     <span>📍 {profile.state}</span>
                   </div>
                 )}
                 {profile?.income_annual && (
-                  <div className="flex items-center gap-1 rounded-xl bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                  <div className="flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-950 shadow-2xs">
                     <span>💵 ₹{(profile.income_annual).toLocaleString()}/yr</span>
                   </div>
                 )}
                 {profile?.condition && (
-                  <div className="flex items-center gap-1 rounded-xl bg-purple-50 border border-purple-200 px-2.5 py-1 text-xs font-semibold text-purple-800">
+                  <div className="flex items-center gap-1 rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-semibold text-purple-900 shadow-2xs">
                     <span>🏠 {profile.condition}</span>
                   </div>
                 )}
                 {profile?.education_need && (
-                  <div className="flex items-center gap-1 rounded-xl bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-800">
+                  <div className="flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-900 shadow-2xs">
                     <span>🎓 {profile.education_need}</span>
                   </div>
                 )}
                 {profile?.ration_card && (
-                  <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-bold text-amber-900">
-                    <Filter className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-950 shadow-2xs">
+                    <Filter className="h-3 w-3 text-amber-700" />
                     <span>Card: {profile.ration_card}</span>
                   </div>
                 )}
