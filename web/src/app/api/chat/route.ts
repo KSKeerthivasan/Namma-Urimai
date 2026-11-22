@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGemini } from "@/lib/geminiClient";
-import type { Profile } from "@/lib/types";
+import type { DynamicFollowup, Profile } from "@/lib/types";
 import { SchemaType, type ResponseSchema } from "@google/generative-ai";
 
 export const runtime = "nodejs";
@@ -90,21 +90,196 @@ const SYSTEM_INSTRUCTION =
   "     - Agriculture: ask farm type ['🌱 Small/Marginal Farmer (< 5 Acres)', '🚜 Large Farmer (> 5 Acres)', '🐄 Dairy / Livestock Cultivator']. " +
   "   Step 4 (Completion): If citizen details are already complete or specific enough to pinpoint <= 5 schemes, set 'dynamic_followup.question' to '' and 'chips' to []. Do NOT ask unnecessary questions!";
 
-// Retries transient 503 / "Service Unavailable" errors up to 2 times with backoff
-async function generateWithRetry<T>(fn: () => Promise<T>): Promise<T> {
-  const delaysMs = [1000, 2000];
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const transient = msg.includes("503") || msg.includes("Service Unavailable");
-      if (!transient || attempt >= delaysMs.length) {
-        throw err;
-      }
-      await new Promise((r) => setTimeout(r, delaysMs[attempt]));
+// Rule-based deterministic emergency fallback if LLM endpoint encounters 503 high demand or network timeout
+function buildDeterministicFallback(message: string, existingProfile: unknown): {
+  profile: Profile;
+  conversational_response: string;
+  search_terms: string[];
+  dynamic_followup: DynamicFollowup | null;
+} {
+  const lowerMsg = message.toLowerCase();
+  const rawExisting =
+    typeof existingProfile === "object" && existingProfile !== null
+      ? (existingProfile as Record<string, unknown>)
+      : {};
+
+  const profile: Profile = { ...(rawExisting as unknown as Profile) };
+
+  // Language check
+  let detectedLang = "en";
+  if (/[\u0B80-\u0BFF]/.test(message)) detectedLang = "ta";
+  else if (/[\u0900-\u097F]/.test(message)) detectedLang = "hi";
+  else if (/[\u0C00-\u0C7F]/.test(message)) detectedLang = "te";
+  profile.detected_language = detectedLang;
+
+  // State extraction
+  if (!profile.state) {
+    if (lowerMsg.includes("tamil nadu") || lowerMsg.includes("chennai") || lowerMsg.includes("coimbatore") || lowerMsg.includes("madurai")) profile.state = "Tamil Nadu";
+    else if (lowerMsg.includes("karnataka") || lowerMsg.includes("bengaluru")) profile.state = "Karnataka";
+    else if (lowerMsg.includes("maharashtra") || lowerMsg.includes("mumbai")) profile.state = "Maharashtra";
+    else if (lowerMsg.includes("kerala")) profile.state = "Kerala";
+    else if (lowerMsg.includes("telangana") || lowerMsg.includes("hyderabad")) profile.state = "Telangana";
+    else if (lowerMsg.includes("andhra")) profile.state = "Andhra Pradesh";
+  }
+
+  // Income extraction
+  if (!profile.income_annual) {
+    if (lowerMsg.includes("1 lakh -") || lowerMsg.includes("below 2.5") || lowerMsg.includes("< 2.5") || lowerMsg.includes("1 to 2.5") || lowerMsg.includes("₹1 lakh")) {
+      profile.income_annual = 200000;
+    } else if (lowerMsg.includes("below 1 lakh") || lowerMsg.includes("< 1 lakh")) {
+      profile.income_annual = 90000;
+    } else if (lowerMsg.includes("2.5 lakh -") || lowerMsg.includes("below 5") || lowerMsg.includes("< 5")) {
+      profile.income_annual = 400000;
+    } else if (lowerMsg.includes("above 5 lakh") || lowerMsg.includes("> 5 lakh")) {
+      profile.income_annual = 600000;
     }
   }
+
+  // Condition & Needs
+  let conversationalResponse = "We understand your situation and are identifying the government welfare schemes you qualify for.";
+  let searchTerms: string[] = [];
+  let dynamicFollowup: DynamicFollowup | null = null;
+
+  const isEdu = lowerMsg.includes("scholar") || lowerMsg.includes("student") || lowerMsg.includes("education") || lowerMsg.includes("college") || lowerMsg.includes("school");
+  const isPension = lowerMsg.includes("pension") || lowerMsg.includes("old age") || lowerMsg.includes("senior citizen");
+  const isHealth = lowerMsg.includes("surgery") || lowerMsg.includes("hernia") || lowerMsg.includes("health") || lowerMsg.includes("hospital") || lowerMsg.includes("medical") || lowerMsg.includes("treatment");
+  const isFarmer = lowerMsg.includes("farmer") || lowerMsg.includes("agriculture") || lowerMsg.includes("kisan") || lowerMsg.includes("crop");
+
+  if (isEdu) {
+    profile.education_need = profile.education_need || "College / Higher Education Scholarship";
+    profile.general_need = profile.general_need || "Scholarship";
+    conversationalResponse =
+      detectedLang === "ta"
+        ? "மாணவர்களுக்கான கல்வி உதவித்தொகை மற்றும் கட்டண சலுகை திட்டங்களை கண்டறிந்துள்ளோம்."
+        : "We understand you are seeking educational scholarships and student support. Here are the active government schemes matching your academic needs:";
+    searchTerms = ["scholarship", "students", "education", "tuition"];
+
+    if (!profile.state) {
+      dynamicFollowup = {
+        question: "Which state are you currently studying or living in?",
+        chips: [
+          { label: "📍 Tamil Nadu", narrowing_keyword: "Tamil Nadu" },
+          { label: "📍 Karnataka", narrowing_keyword: "Karnataka" },
+          { label: "📍 Maharashtra", narrowing_keyword: "Maharashtra" },
+          { label: "✏️ Other State", narrowing_keyword: "other" },
+        ],
+      };
+    } else if (!profile.community) {
+      dynamicFollowup = {
+        question: "Which community or academic quota applies to you?",
+        chips: [
+          { label: "👥 BC / MBC / DNC", narrowing_keyword: "BC MBC" },
+          { label: "👥 SC / ST", narrowing_keyword: "SC ST" },
+          { label: "🎓 First Graduate", narrowing_keyword: "First Graduate" },
+          { label: "🌐 General / Open", narrowing_keyword: "General" },
+        ],
+      };
+    }
+  } else if (isPension) {
+    profile.general_need = "Old Age Pension";
+    if (!profile.age) profile.age = 65;
+    if (lowerMsg.includes("destitute") || lowerMsg.includes("no family support")) {
+      profile.condition = "Destitute / No Family Support";
+    }
+
+    conversationalResponse =
+      detectedLang === "ta"
+        ? "முதியோர் ஓய்வூதியம் மற்றும் முதியவர்களுக்கான சமூக பாதுகாப்பு திட்டங்களை கண்டறிந்துள்ளோம்."
+        : "As a senior citizen, you may be eligible for old age pension schemes providing monthly financial security. Here are the verified programs for you:";
+    searchTerms = ["old age pension", "senior citizen pension", "social security pension"];
+
+    if (!profile.state) {
+      dynamicFollowup = {
+        question: "Which state are you currently living in?",
+        chips: [
+          { label: "📍 Tamil Nadu", narrowing_keyword: "Tamil Nadu" },
+          { label: "📍 Karnataka", narrowing_keyword: "Karnataka" },
+          { label: "📍 Maharashtra", narrowing_keyword: "Maharashtra" },
+          { label: "✏️ Other State", narrowing_keyword: "other" },
+        ],
+      };
+    } else if (!profile.income_annual) {
+      dynamicFollowup = {
+        question: "What is your approximate family annual income?",
+        chips: [
+          { label: "💰 Below ₹1 Lakh", narrowing_keyword: "below 1 lakh" },
+          { label: "💵 ₹1 Lakh - ₹2.5 Lakhs", narrowing_keyword: "below 2.5 lakhs" },
+          { label: "💳 ₹2.5 Lakhs - ₹5 Lakhs", narrowing_keyword: "below 5 lakhs" },
+          { label: "💼 Above ₹5 Lakhs", narrowing_keyword: "above 5 lakhs" },
+        ],
+      };
+    }
+  } else if (isHealth) {
+    profile.medical_need = profile.medical_need || "Surgery & Cashless Hospitalization";
+    conversationalResponse =
+      detectedLang === "ta"
+        ? "மருத்துவ சிகிச்சை மற்றும் கட்டணமில்லா அறுவை சிகிச்சைக்கான அரசு காப்பீட்டு திட்டங்களை கண்டறிந்துள்ளோம்."
+        : "We understand you require medical treatment. Government health insurance schemes provide cashless hospitalization up to ₹5 Lakhs per family across network hospitals:";
+    searchTerms = ["health insurance", "cashless treatment", "hospitalization", "surgery"];
+
+    if (!profile.state) {
+      dynamicFollowup = {
+        question: "Which state and district are you currently living in?",
+        chips: [
+          { label: "📍 Tamil Nadu", narrowing_keyword: "Tamil Nadu" },
+          { label: "📍 Karnataka", narrowing_keyword: "Karnataka" },
+          { label: "📍 Maharashtra", narrowing_keyword: "Maharashtra" },
+          { label: "✏️ Other State", narrowing_keyword: "other" },
+        ],
+      };
+    } else if (!profile.ration_card) {
+      dynamicFollowup = {
+        question: "Which ration card does your family hold?",
+        chips: [
+          { label: "🍚 Rice Card (PHH)", narrowing_keyword: "Rice Card" },
+          { label: "🍬 Sugar Card (NPHH)", narrowing_keyword: "Sugar Card" },
+          { label: "🚫 No Ration Card", narrowing_keyword: "No Card" },
+        ],
+      };
+    }
+  } else if (isFarmer) {
+    profile.general_need = "Farmer / Agriculture Subsidy";
+    conversationalResponse = "We understand you are seeking agricultural welfare programs. Here are the active government schemes matching your needs:";
+    searchTerms = ["farmer", "agriculture", "kisan", "crop subsidy"];
+
+    if (!profile.state) {
+      dynamicFollowup = {
+        question: "Which state are you currently farming in?",
+        chips: [
+          { label: "📍 Tamil Nadu", narrowing_keyword: "Tamil Nadu" },
+          { label: "📍 Karnataka", narrowing_keyword: "Karnataka" },
+          { label: "📍 Maharashtra", narrowing_keyword: "Maharashtra" },
+          { label: "✏️ Other State", narrowing_keyword: "other" },
+        ],
+      };
+    }
+  } else {
+    // General fallback
+    const words = message
+      .replace(/[^\w\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 4 && !["need", "want", "find", "scheme", "schemes", "government", "give", "help"].includes(w.toLowerCase()));
+    searchTerms = words.length > 0 ? words.slice(0, 3) : ["welfare", "assistance"];
+    conversationalResponse = "Here are the government welfare schemes matching your criteria:";
+    if (!profile.state) {
+      dynamicFollowup = {
+        question: "Which state are you currently living in?",
+        chips: [
+          { label: "📍 Tamil Nadu", narrowing_keyword: "Tamil Nadu" },
+          { label: "📍 Karnataka", narrowing_keyword: "Karnataka" },
+          { label: "📍 Maharashtra", narrowing_keyword: "Maharashtra" },
+          { label: "✏️ Other State", narrowing_keyword: "other" },
+        ],
+      };
+    }
+  }
+
+  return {
+    profile,
+    conversational_response: conversationalResponse,
+    search_terms: searchTerms,
+    dynamic_followup: dynamicFollowup,
+  };
 }
 
 export async function POST(request: Request) {
@@ -125,11 +300,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
-  const model = process.env.GEMINI_MODEL ?? "gemini-flash-lite-latest";
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-flash-lite-latest";
 
   try {
     const generativeModel = getGemini().getGenerativeModel({
-      model,
+      model: modelName,
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema,
@@ -145,7 +320,7 @@ export async function POST(request: Request) {
     }
     prompt += `\nCurrent citizen message:\n${message}`;
 
-    const result = await generateWithRetry(() => generativeModel.generateContent(prompt));
+    const result = await generativeModel.generateContent(prompt);
     const parsed = JSON.parse(result.response.text());
 
     // Clean merge: never let null/undefined/0/empty string in parsed.profile overwrite an existing profile value
@@ -239,11 +414,11 @@ export async function POST(request: Request) {
     const errName = err instanceof Error ? err.name : "Error";
     const errMessage = (err instanceof Error ? err.message : String(err))
       .replace(/AIza[0-9A-Za-z_-]+|AQ\.[0-9A-Za-z_-]+/g, "<REDACTED>")
-      .slice(0, 400);
-    console.error("chat: profile extraction failed:", errName, errMessage);
-    return NextResponse.json(
-      { error: "Could not process the message right now" },
-      { status: 502 }
-    );
+      .slice(0, 200);
+    console.warn(`[chat] Gemini API encountered issue (${errName}: ${errMessage}). Engaging deterministic fallback.`);
+
+    // Fallback: seamless rule-based processing so citizen NEVER sees an error
+    const fallback = buildDeterministicFallback(message, existingProfile);
+    return NextResponse.json(fallback);
   }
 }

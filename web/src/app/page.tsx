@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Header from "@/components/Header";
 import ChatInterface from "@/components/ChatInterface";
 import SchemeCard from "@/components/SchemeCard";
 import { mergeSchemes } from "@/lib/healthSearch";
 import type { DynamicChip, DynamicFollowup, Profile, SchemeRow } from "@/lib/types";
-import { ShieldCheck, Sparkles, Filter, X, ChevronDown, UserCheck, LogIn, RotateCcw } from "lucide-react";
-import CitizenAuthModal from "@/components/CitizenAuthModal";
+import { Sparkles, Filter, X, ChevronDown, RotateCcw, ShieldCheck } from "lucide-react";
 
 type SearchParams = { q?: string; state?: string; benefit_type?: string; limit?: number };
 
@@ -23,26 +21,9 @@ export default function Home() {
   const [displayCount, setDisplayCount] = useState<number>(12);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [hideGuestBanner, setHideGuestBanner] = useState<boolean>(false);
-
-  const [citizenUser, setCitizenUser] = useState<{ phone: string; name: string } | null>(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Restore session from sessionStorage on page load/refresh
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("namma_citizen_user");
-      if (storedUser) {
-        setCitizenUser(JSON.parse(storedUser));
-      }
-    } catch {}
-
-    const handleAuth = (e: Event) => {
-      const customEvent = e as CustomEvent<{ phone: string; name: string } | null>;
-      setCitizenUser(customEvent.detail || null);
-    };
-
-    window.addEventListener("namma-auth-changed", handleAuth);
     try {
       const stored = sessionStorage.getItem("namma_page_session");
       if (stored) {
@@ -54,10 +35,6 @@ export default function Home() {
         if (data.activeFilterName) setActiveFilterName(data.activeFilterName);
         if (data.dynamicFollowup) setDynamicFollowup(data.dynamicFollowup);
         if (data.schemes) setSchemes(data.schemes);
-      }
-      const dismissedBanner = localStorage.getItem("namma_guest_dismissed");
-      if (dismissedBanner === "true") {
-        setHideGuestBanner(true);
       }
     } catch {}
   }, []);
@@ -506,13 +483,6 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function dismissGuestBanner() {
-    setHideGuestBanner(true);
-    try {
-      localStorage.setItem("namma_guest_dismissed", "true");
-    } catch {}
-  }
-
   const displayedSchemes = schemes.slice(0, displayCount);
   const hasMore = schemes.length > displayCount;
 
@@ -534,66 +504,6 @@ export default function Home() {
             Tell us your situation naturally. We match you with government pensions, scholarships, medical coverage, and direct financial subsidies.
           </p>
         </section>
-
-        {/* Citizen Access Mode: Guest vs Login Decision Banner */}
-        {!hideGuestBanner && (
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#132A1D] text-white p-4.5 rounded-3xl shadow-xs border border-emerald-950/40">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-emerald-300 mt-0.5">
-                {citizenUser ? <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" /> : <UserCheck className="h-4.5 w-4.5" />}
-              </div>
-              <div className="text-xs space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-bold text-sm text-white">
-                    {citizenUser ? `Citizen Account Active (+91 ${citizenUser.phone.slice(-4)})` : "Guest Mode Active (No Login Required)"}
-                  </p>
-                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] tracking-wide ${citizenUser ? "bg-emerald-900/90 text-emerald-300 border border-emerald-600/40" : "bg-white/10 text-stone-200 border border-white/15"}`}>
-                    {citizenUser ? "☁️ Cloud Synced" : "Local Browser Only"}
-                  </span>
-                </div>
-                <p className="text-stone-300 leading-relaxed max-w-3xl">
-                  {citizenUser ? (
-                    <span>Your document checklist checkboxes, saved schemes, and application roadmap progress are synced across all your devices.</span>
-                  ) : (
-                    <span>
-                      You can freely search all 5,200+ central &amp; state schemes and download official A4 PDF dossiers without logging in.
-                      <strong className="text-amber-300 block sm:inline sm:ml-1">
-                        ⚠️ Note: Without login, you cannot track your document checklist or application roadmap completion across devices.
-                      </strong>
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 self-end md:self-center mt-2 md:mt-0">
-              {!citizenUser && (
-                <button
-                  type="button"
-                  onClick={() => setAuthModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-stone-950 px-4 py-2 text-xs font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <LogIn className="h-3.5 w-3.5" />
-                  <span>Login to Track</span>
-                </button>
-              )}
-              <Link
-                href="/tracker"
-                className="inline-flex items-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 text-xs font-bold text-white transition-all"
-              >
-                Saved Schemes
-              </Link>
-              <button
-                type="button"
-                onClick={dismissGuestBanner}
-                className="text-stone-400 hover:text-white p-1 rounded-full cursor-pointer"
-                title="Dismiss note"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Interactive Conversational Assistant (Template Showcase Container) */}
         <div className="rounded-3xl bg-gradient-to-b from-[#E7EFE8]/70 via-[#F0F5F1]/40 to-white/20 p-2 sm:p-3 border border-[#D5E3D6] shadow-2xs">
@@ -729,12 +639,6 @@ export default function Home() {
           </section>
         )}
 
-        {/* Citizen Authentication Modal */}
-        <CitizenAuthModal
-          isOpen={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          onLoginSuccess={(user) => setCitizenUser(user)}
-        />
       </main>
     </div>
   );

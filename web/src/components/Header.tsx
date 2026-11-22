@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/components/LocaleProvider";
 import { t, type Locale } from "@/lib/i18n";
-import { Bookmark, Phone, Check, User, LogOut, ShieldCheck } from "lucide-react";
-import CitizenAuthModal from "@/components/CitizenAuthModal";
+import { Bookmark, Phone, Check } from "lucide-react";
 
 const LANGUAGES: { code: Locale; label: string; name: string }[] = [
   { code: "en", label: "English", name: "English" },
@@ -22,47 +21,9 @@ const HELPLINES = [
   { number: "1100", label: "CM Helpline", title: "CM Citizen Grievance Helpline" },
 ];
 
-type CitizenUser = {
-  phone: string;
-  name: string;
-  loggedIn: boolean;
-};
-
 export default function Header() {
   const { locale, setLocale } = useLocale();
   const [copiedNumber, setCopiedNumber] = useState<string | null>(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CitizenUser | null>(null);
-
-  useEffect(() => {
-    // Check initial login state
-    try {
-      const stored = localStorage.getItem("namma_citizen_user");
-      if (stored) {
-        setCurrentUser(JSON.parse(stored));
-      }
-    } catch {}
-
-    const handleAuthChange = (e: Event) => {
-      const customEvent = e as CustomEvent<CitizenUser | null>;
-      if (customEvent.detail) {
-        setCurrentUser(customEvent.detail);
-      } else {
-        setCurrentUser(null);
-      }
-    };
-
-    window.addEventListener("namma-auth-changed", handleAuthChange);
-    return () => window.removeEventListener("namma-auth-changed", handleAuthChange);
-  }, []);
-
-  function handleLogout() {
-    try {
-      localStorage.removeItem("namma_citizen_user");
-      window.dispatchEvent(new CustomEvent("namma-auth-changed", { detail: null }));
-    } catch {}
-    setCurrentUser(null);
-  }
 
   function handleHelplineClick(e: React.MouseEvent<HTMLAnchorElement>, number: string, title: string) {
     const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -162,50 +123,16 @@ export default function Header() {
             })}
           </div>
 
-          {/* Citizen Login / Status Button */}
-          {currentUser ? (
-            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300/80 rounded-full px-3.5 py-1.5 text-xs">
-              <div className="flex items-center gap-1 font-bold text-emerald-950">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span>+91 {currentUser.phone.slice(-4)}</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                title="Log out to Guest Mode"
-                className="text-stone-500 hover:text-red-700 p-1 transition-colors"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAuthModalOpen(true)}
-              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-[#132A1D] bg-white px-4 text-xs font-bold text-[#132A1D] hover:bg-emerald-50/70 transition-all cursor-pointer shadow-2xs"
-            >
-              <User className="h-4 w-4 text-emerald-800" />
-              <span>Login</span>
-            </button>
-          )}
-
           {/* Saved Schemes Link */}
           <Link
             href="/tracker"
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#132A1D] px-4.5 text-xs font-bold text-white shadow-xs hover:bg-[#1E3A2B] transition-all"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#132A1D] px-5 text-xs font-bold text-white shadow-xs hover:bg-[#1E3A2B] transition-all"
           >
             <Bookmark className="h-3.5 w-3.5" />
             <span>{t("nav_saved", locale)}</span>
           </Link>
         </div>
       </div>
-
-      {/* Citizen Authentication Modal */}
-      <CitizenAuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onLoginSuccess={(user) => setCurrentUser(user as CitizenUser)}
-      />
     </header>
   );
 }

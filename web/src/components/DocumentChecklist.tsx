@@ -15,32 +15,15 @@ const OWNED_DOCUMENTS = ["Aadhaar card", "Smart Ration Card"];
 export default function DocumentChecklist({ slug = "default", documentsToObtain }: Props) {
   const { locale } = useLocale();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const [citizenUser, setCitizenUser] = useState<{ phone: string; name: string } | null>(null);
 
-  // Restore checked items and citizen auth from localStorage
+  // Restore checked items from localStorage
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("namma_citizen_user");
-      if (storedUser) {
-        setCitizenUser(JSON.parse(storedUser));
-      }
-    } catch {}
-
-    const handleAuth = (e: Event) => {
-      const customEvent = e as CustomEvent<{ phone: string; name: string } | null>;
-      setCitizenUser(customEvent.detail || null);
-    };
-
-    window.addEventListener("namma-auth-changed", handleAuth);
-
     try {
       const stored = localStorage.getItem(`namma_checklist_${slug}`);
       if (stored) {
         setChecked(JSON.parse(stored));
       }
     } catch {}
-
-    return () => window.removeEventListener("namma-auth-changed", handleAuth);
   }, [slug]);
 
   function toggle(key: string) {
@@ -60,27 +43,19 @@ export default function DocumentChecklist({ slug = "default", documentsToObtain 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/70 border border-blue-200/80 p-3.5 rounded-xl text-xs text-blue-900 font-medium">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#F0F5F1] border border-[#D5E3D6] p-4 rounded-2xl text-xs text-[#132A1D] font-medium">
         <div className="space-y-1">
-          <p className="font-semibold text-slate-900">
-            Check off documents as you gather them. Your selections are automatically saved and mirrored in the PDF printout.
+          <p className="font-bold text-[#132A1D]">
+            Check off documents as you gather them. Your selections are automatically saved in your browser and mirrored in the PDF printout.
           </p>
-          <p className="text-[11px]">
-            {citizenUser ? (
-              <span className="text-emerald-800 font-bold">
-                ☁️ Synced to Citizen Account (+91 {citizenUser.phone.slice(-4)}) across your devices.
-              </span>
-            ) : (
-              <span className="text-amber-800 font-medium">
-                ⚠️ Guest Mode: Saved only on this browser. Sign in from header to sync across devices.
-              </span>
-            )}
+          <p className="text-[11px] text-stone-600 font-medium">
+            No login required — your document progress is maintained directly in your local browser.
           </p>
         </div>
         <button
           type="button"
           onClick={handlePrint}
-          className="print-hide shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#0F294A] px-4 py-2 font-bold text-white shadow-xs hover:bg-[#1E40AF] transition-all cursor-pointer"
+          className="print-hide shrink-0 inline-flex items-center gap-1.5 rounded-full bg-[#132A1D] px-4 py-2 font-bold text-white shadow-xs hover:bg-[#1E3A2B] transition-all cursor-pointer"
         >
           <Printer className="h-4 w-4" />
           <span>Save / Print PDF</span>
