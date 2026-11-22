@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F8FAFC;
+  --foreground: #171717;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Print-only title for the checklist; hidden on screen. */
+.print-only {
+  display: none;
+}
+
+/* Print Styles: A4 Portrait, Crisp Official Layout, Zero Page Overflow */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide screen-only interactive elements */
+  .print-hide,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Show dedicated printable elements */
+  .print-only,
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Prevent broken pages */
+  article, section, .border {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  [role="tabpanel"] {
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  [role="tabpanel"][hidden] {
+    display: none !important;
+  }
+}
