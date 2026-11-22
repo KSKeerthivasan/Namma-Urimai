@@ -7,7 +7,7 @@ import ChatInterface from "@/components/ChatInterface";
 import SchemeCard from "@/components/SchemeCard";
 import { mergeSchemes } from "@/lib/healthSearch";
 import type { DynamicChip, DynamicFollowup, Profile, SchemeRow } from "@/lib/types";
-import { ShieldCheck, Sparkles, Filter, X, ChevronDown, UserCheck, LogIn } from "lucide-react";
+import { ShieldCheck, Sparkles, Filter, X, ChevronDown, UserCheck, LogIn, RotateCcw } from "lucide-react";
 import CitizenAuthModal from "@/components/CitizenAuthModal";
 
 type SearchParams = { q?: string; state?: string; benefit_type?: string; limit?: number };
@@ -494,7 +494,16 @@ export default function Home() {
     setActiveFilterName(null);
     setDynamicFollowup(null);
     setSchemes([]);
-    sessionStorage.removeItem("namma_page_session");
+    try {
+      sessionStorage.removeItem("namma_page_session");
+      sessionStorage.removeItem("namma_profile");
+      sessionStorage.removeItem("namma_chat_messages");
+      sessionStorage.removeItem("namma_schemes");
+      sessionStorage.removeItem("namma_filter");
+      sessionStorage.removeItem("namma_followup");
+      localStorage.removeItem("namma_profile");
+    } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function dismissGuestBanner() {
@@ -680,6 +689,15 @@ export default function Home() {
                     <span>Card: {profile.ration_card}</span>
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={handleResetAll}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 px-3.5 py-1 text-xs font-bold transition-all shadow-2xs hover:border-[#132A1D] hover:text-[#132A1D] cursor-pointer ml-auto"
+                  title="Clear conversation and search for a new scheme"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  <span>New Scheme Search</span>
+                </button>
               </div>
             </div>
 

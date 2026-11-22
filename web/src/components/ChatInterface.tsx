@@ -103,6 +103,8 @@ export default function ChatInterface({
     sessionStorage.removeItem("namma_schemes");
     sessionStorage.removeItem("namma_filter");
     sessionStorage.removeItem("namma_followup");
+    sessionStorage.removeItem("namma_page_session");
+    localStorage.removeItem("namma_profile");
     setMessages([
       {
         id: `welcome-${Date.now()}`,
@@ -262,20 +264,20 @@ export default function ChatInterface({
     <section aria-label="Citizen Conversation" className="flex flex-col gap-4">
       {/* Conversation Thread */}
       <div className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm border border-slate-200 min-h-[220px] max-h-[500px] overflow-y-auto">
-        <div className="flex items-center justify-between pb-2 mb-1 border-b border-slate-100 text-xs text-slate-500 font-semibold">
-          <span className="flex items-center gap-1 text-[#0F294A]">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+        <div className="flex items-center justify-between pb-3 mb-2 border-b border-stone-200/80 text-xs font-semibold">
+          <span className="flex items-center gap-1.5 text-[#132A1D] font-bold">
+            <Sparkles className="h-3.5 w-3.5 text-emerald-700" />
             Namma-Urimai Citizen Assistance
           </span>
           {messages.length > 1 && (
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex items-center gap-1 text-slate-600 hover:text-red-700 transition-colors"
-              title="Reset conversation and start fresh"
+              className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 hover:bg-red-50 text-stone-700 hover:text-red-700 border border-stone-200 hover:border-red-200 px-3 py-1 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              title="Clear chat and search for a new scheme"
             >
               <RotateCcw className="h-3 w-3" />
-              <span>Start Fresh</span>
+              <span>Clear Chat / New Search</span>
             </button>
           )}
         </div>
@@ -434,8 +436,19 @@ export default function ChatInterface({
               })}
             </div>
 
-            {/* Action Button: Send only */}
+            {/* Action Buttons: Send & Clear */}
             <div className="flex items-center gap-2 ml-auto">
+              {messages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-stone-300 bg-white px-4 text-xs font-bold text-stone-700 shadow-2xs hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all cursor-pointer"
+                  title="Clear chat and search for a new scheme"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Clear Chat</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleSend()}
